@@ -19,23 +19,30 @@ domain = 'http://club.autohome.com.cn'#拼接用
 ua = UserAgent()#使用随机header，模拟人类
 #伪装成浏览器
 headers = {'User-Agent':'ua.random'}#使用随机header，模拟人类
+targetUrl ='http://club.autohome.com.cn/bbs/forum-c-3665-1.html'#此处放入想爬取的车型论坛网址
+targetUrl1 = targetUrl[0:targetUrl.rfind('-')+1]
+print targetUrl1
 
-#获取论坛首页所有帖子的标题和地址
+#获取该车型论坛总共帖子页数
+def getUrl():
+    url =targetUrl
+    s = requests.session()
+    r = s.get(url, headers=headers)
+    text = r.text
+    soup = BeautifulSoup(bs_preprocess.bs_preprocess(text),'html.parser')
+    pageNumber = soup.find('span',attrs={'class':'fs'}).text
+    return int(re.findall(r"\d+\.?\d*",pageNumber)[0])
+
+#获取论坛所有帖子的标题和地址
 def getList(pn):
-	url = 'http://club.autohome.com.cn/bbs/forum-c-3788-%d.html'%pn
-	req = urllib2.Request(
-   			url = url,
-    		#data = postdata,
-   			headers = headers
-		)
-	opener = urllib2.urlopen(req,timeout = 10)#打开论坛
-	content = opener.read()#访问源代码
-	text = content.decode('gbk','ignore').encode('utf-8')#格式转换ignore忽略错误
-	text = bs_preprocess.bs_preprocess(text)
-	reg = re.compile(r'<a class="a_topic" target="_blank" href="(.+?)">(.+?)</a>')#通过正则表达式获取每个论坛明细页url和标题
-	return re.findall(reg,text)
-	#print text
-	#print div
+    url = targetUrl1+str(pn)+'.html'
+    s = requests.session()
+    r = s.get(url, headers=headers)
+    text = r.text
+    text = bs_preprocess.bs_preprocess(text)
+    reg = re.compile(r'<a class="a_topic" target="_blank" href="(.+?)">(.+?)</a>')#通过正则表达式获取每个论坛明细页url和标题
+    return re.findall(reg,text)
+
 
 #访问每个帖子发帖内容
 def getContent(url):
@@ -43,19 +50,6 @@ def getContent(url):
     s = requests.session()
     r = s.get(url1, headers=headers)
     text = r.text
-    """
-    req = urllib2.Request(
-        url = url1,
-        #data = postdata,
-        headers = headers
-    )
-    opener = urllib2.urlopen(req,timeout = 10)#打开每个帖子
-    text = opener.read()#访问源代码
-    print text
-    """
-    #print chardet.detect(text)['encoding']
-    #text = text.decode('gbk','ignore').encode('utf-8')#格式转换,ignore用来忽略错误
-    #print text
     soup = BeautifulSoup(bs_preprocess.bs_preprocess(text),'html.parser')
     title = soup.find('h1',attrs={'class':'rtitle'}).text#帖子标题
     title1 = repr(title)
@@ -82,8 +76,6 @@ def getReplay(url):
     s = requests.session()
     r = s.get(url, headers=headers)
     text = r.text
-    #print text
-    #text = text.decode('gbk','ignore').encode('utf-8')#格式转换,ignore用来忽略错误
     soup = BeautifulSoup(bs_preprocess.bs_preprocess(text),'html.parser')
     title = soup.find('h1',attrs={'class':'rtitle'}).text#帖子标题
     title1 = repr(title)
@@ -91,7 +83,7 @@ def getReplay(url):
     print title2
     auto = soup.find('li',attrs={'class':'txtcenter fw'}).text#发帖作者
     print auto
-    pageNumber = soup.find('span',attrs={'class':'fs'}).text#回帖页数
+    pageNumber = soup.find('span',attrs={'class':'fs'}).text#获取回帖页数
     pageNumber =  int(re.findall(r"\d+\.?\d*",pageNumber)[0])
     #print pageNumber
     pn = 1
@@ -113,14 +105,19 @@ def getReplay(url):
         pn = pn +1
 
 
+#调度
 try:
-    for i in getList(1000):
-        url = i[0]
-        title = i[1]
-        print url,title
-        getContent(url)
-        getReplay(url)
-        #break
+    num = 1
+    total = getUrl()
+    while num <= total:
+        for i in getList(num):
+            url = i[0]
+            title = i[1]
+            print url,title
+            #getContent(url)
+            #getReplay(url)
+            #break
+        num = num+1
 except:
     print '空'
 
