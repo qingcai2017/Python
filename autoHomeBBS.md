@@ -19,10 +19,10 @@ domain = 'http://club.autohome.com.cn'#拼接用
 ua = UserAgent()#使用随机header，模拟人类
 #伪装成浏览器
 headers = {'User-Agent':'ua.random'}#使用随机header，模拟人类
-targetUrl ='http://club.autohome.com.cn/bbs/forum-c-3665-1.html'#此处放入想爬取的车型论坛网址
+targetUrl ='http://club.autohome.com.cn/bbs/forum-c-359-1.html'#此处放入想爬取的车型论坛网址
 targetUrl1 = targetUrl[0:targetUrl.rfind('-')+1]
 print targetUrl1
-
+a_list = []
 #获取该车型论坛总共帖子页数
 def getUrl():
     url =targetUrl
@@ -39,9 +39,18 @@ def getList(pn):
     s = requests.session()
     r = s.get(url, headers=headers)
     text = r.text
-    text = bs_preprocess.bs_preprocess(text)
-    reg = re.compile(r'<a class="a_topic" target="_blank" href="(.+?)">(.+?)</a>')#通过正则表达式获取每个论坛明细页url和标题
-    return re.findall(reg,text)
+    soup = BeautifulSoup(bs_preprocess.bs_preprocess(text),'html.parser')
+    div = soup.find('div',attrs={'id':'subcontent'})
+    #print div
+    for a in div.find_all('a',attrs={'class':'a_topic'}):
+        a_list.append(a['href'])
+        #return a_list['href']
+    #return div.find_all('a',attrs={'class':'a_topic'})
+    #print str(div)
+
+    #reg = re.compile(r'<a class="a_topic" target="_blank" href="(.+?)">(.+?)</a>',re.S)#通过正则表达式获取每个论坛明细页url和标题
+    #return re.findall(reg,div)
+    #result = reg.search(div)
 
 
 #访问每个帖子发帖内容
@@ -110,13 +119,13 @@ try:
     num = 1
     total = getUrl()
     while num <= total:
-        for i in getList(num):
-            url = i[0]
-            title = i[1]
-            print url,title
+        getList(num)
+        for url in a_list:
+            print url
             #getContent(url)
             #getReplay(url)
             #break
+        print num
         num = num+1
 except:
     print '空'
